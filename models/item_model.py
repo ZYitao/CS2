@@ -69,40 +69,52 @@ class ItemModel:
         return f"{buy_time.strftime('%Y%m%d%H%M%S')}_{goods_wear_value:.4f}"
 
     def add_item(self, goods_name, goods_type, goods_wear, goods_wear_value,
-                buy_price, buy_time, is_stattrak=False):
-        """添加新商品，初始状态为冷却期。
-        该方法接收商品的基本信息，并生成唯一ID，
-        检查是否已存在相同ID的商品，
-        如果不存在，则将新商品添加到库存中。
-        """ 
-        # 生成商品ID
-        inventory_id = self._generate_inventory_id(buy_time, goods_wear_value)
+                 is_stattrak, buy_price, buy_time=None):
+        """添加新商品到库存。
         
-        # 读取现有数据
-        df = self._read_inventory()
+        Args:
+            goods_name (str): 商品名称
+            goods_type (str): 商品类型
+            goods_wear (str): 商品磨损等级
+            goods_wear_value (float): 具体磨损值
+            is_stattrak (bool): 是否暗金
+            buy_price (float): 购买价格
+            buy_time (datetime, optional): 购买时间，默认为当前时间
+        """
+        if buy_time is None:
+            buy_time = datetime.now()
+            
+        # 生成库存ID
+        inventory_id = f"{buy_time.strftime('%Y%m%d%H%M%S')}_{goods_wear_value:.4f}"
         
-        # 检查是否已存在
-        if inventory_id in df['inventory_id'].values:
-            return False, "商品ID已存在"
+        # 创建新商品数据
+        new_item = {
+            'inventory_id': inventory_id,
+            'goods_name': goods_name,
+            'goods_type': goods_type,
+            'goods_wear': goods_wear,
+            'goods_wear_value': goods_wear_value,
+            'is_stattrak': is_stattrak,
+            'buy_price': buy_price,
+            'buy_time': buy_time,
+            'goods_state': self.STATUS_COOLING,  # 新添加的商品默认为冷却期
+        }
         
-        # 创建新商品记录
-        new_item = pd.DataFrame({
-            'inventory_id': [inventory_id],
-            'goods_name': [goods_name],
-            'goods_type': [goods_type],
-            'goods_wear': [goods_wear],
-            'goods_wear_value': [goods_wear_value],
-            'is_stattrak': [is_stattrak],
-            'buy_price': [buy_price],
-            'buy_time': [buy_time],
-            'goods_state': [self.STATUS_COOLING]  # 初始状态为冷却期
-        })
-        
-        # 添加新商品
-        df = pd.concat([df, new_item], ignore_index=True)
-        self._save_inventory(df)
-        
-        return True, "商品添加成功"
+        try:
+            # 读取现有数据
+            df = self._read_inventory()
+            
+            # 添加新商品
+            df = pd.concat([df, pd.DataFrame([new_item])], ignore_index=True)
+            
+            # 保存数据
+            with pd.ExcelWriter(self.file_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+                df.to_excel(writer, sheet_name=self.inventory_sheet, index=False)
+                
+            return True
+        except Exception as e:
+            print(f"添加商品时出错: {str(e)}")
+            return False
 
     def check_cooling_items(self):
         """检查并更新冷却中的商品状态。

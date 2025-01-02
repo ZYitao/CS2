@@ -1,11 +1,39 @@
 from PyQt5.QtWidgets import QPushButton, QTableWidgetItem, QMessageBox, QHeaderView, QDialog, QTableWidget
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor
 from datetime import datetime
 import pandas as pd
 from views.sell_item_dialog import SellItemDialog
 from config.item_types import ITEM_TYPES
 
 class MainController:
+    # 定义状态颜色
+    STATUS_COLORS = {
+        0: QColor(255, 200, 200),  # 冷却期 - 浅红色
+        1: QColor(200, 255, 200),  # 持有中 - 浅绿色
+        2: QColor(200, 200, 255)   # 已售出 - 浅蓝色
+    }
+
+    # 定义按钮样式
+    BUTTON_STYLES = {
+        "出售": """
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 3px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+        """
+    }
+
     def __init__(self, model, view):
         self.model = model
         self.view = view
@@ -113,24 +141,28 @@ class MainController:
             if item['is_stattrak']:
                 name += " (StatTrak™)"
             
-            self.view.inventory_table.setItem(row, 0, QTableWidgetItem(name))
-            self.view.inventory_table.setItem(row, 1, QTableWidgetItem(item['goods_type']))
-            self.view.inventory_table.setItem(row, 2, QTableWidgetItem(f"{item['goods_wear']} ({item['goods_wear_value']:.4f})"))
-            self.view.inventory_table.setItem(row, 3, QTableWidgetItem(f"¥{item['buy_price']:.2f}"))
-            self.view.inventory_table.setItem(row, 4, QTableWidgetItem(pd.to_datetime(item['buy_time']).strftime('%Y-%m-%d %H:%M')))
-            
-            # 设置当前价格
-            current_price = self.model.get_current_price(item['inventory_id'])
-            self.view.inventory_table.setItem(row, 5, QTableWidgetItem(f"¥{current_price:.2f}"))
-            
-            # 设置状态
-            status_text = self.model.get_item_status_text(item['goods_state'])
-            self.view.inventory_table.setItem(row, 6, QTableWidgetItem(status_text))
+            # 创建并设置单元格项
+            for col, value in enumerate([
+                f" {name} ",  # 添加空格
+                f" {item['goods_type']} ",
+                f" {item['goods_wear']} ({item['goods_wear_value']:.4f}) ",
+                f" ¥{item['buy_price']:.2f} ",
+                f" {pd.to_datetime(item['buy_time']).strftime('%Y-%m-%d %H:%M')} ",
+                f" ¥{self.model.get_current_price(item['inventory_id']):.2f} ",
+                f" {self.model.get_item_status_text(item['goods_state'])} "
+            ]):
+                cell_item = QTableWidgetItem(str(value))
+                # 设置背景颜色
+                cell_item.setBackground(self.STATUS_COLORS[item['goods_state']])
+                # 设置文本居中对齐
+                cell_item.setTextAlignment(Qt.AlignCenter)
+                self.view.inventory_table.setItem(row, col, cell_item)
             
             # 添加操作按钮
             if item['goods_state'] == self.model.STATUS_HOLDING:
                 # 创建出售按钮
                 sell_btn = QPushButton("出售")
+                sell_btn.setStyleSheet(self.BUTTON_STYLES["出售"])
                 sell_btn.clicked.connect(lambda checked, id=item['inventory_id']: self.sell_item(id))
                 self.view.inventory_table.setCellWidget(row, 7, sell_btn)
 
@@ -182,7 +214,14 @@ class MainController:
 
         # 应用商品类型筛选
         if self.current_filters['item_type'] != '全部':
-            filtered_df = filtered_df[filtered_df['goods_type'] == self.current_filters['item_type']]
+            # 获取该大类下的所有子类型
+            subtypes = ITEM_TYPES[self.current_filters['item_type']][1:]  # 排除"全部"选项
+            if self.current_filters['subtype'] != '全部':
+                # 如果选择了具体子类型，直接用子类型筛选
+                filtered_df = filtered_df[filtered_df['goods_type'] == self.current_filters['subtype']]
+            else:
+                # 如果选择了全部，使用该大类下的所有子类型筛选
+                filtered_df = filtered_df[filtered_df['goods_type'].isin(subtypes)]
 
         # 应用磨损等级筛选
         if self.current_filters['wear'] != '全部':

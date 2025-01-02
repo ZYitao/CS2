@@ -63,9 +63,14 @@ class AddItemDialog(QDialog):
             
     def get_data(self):
         """获取表单数据"""
+        # 构建商品名称：子类型 + StatTrak™（如果选中）
+        name = self.subtype_combo.currentText()
+        if self.stattrak_checkbox.isChecked():
+            name += " (StatTrak™)"
+            
         return {
-            'goods_name': self.name_input.text().replace(' (StatTrak™)', ''),  # 保存时去掉StatTrak标记
-            'goods_type': self.subtype_combo.currentText(),
+            'goods_name': name,
+            'goods_type': self.type_combo.currentText(),  # 使用主类型
             'goods_wear': self.wear_combo.currentText(),
             'goods_wear_value': self.wear_value_input.value(),
             'buy_price': self.price_input.value(),
