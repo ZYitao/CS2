@@ -292,6 +292,43 @@ class ItemModel:
             
         return df[item_mask].iloc[0]
 
+    def get_time_info(self, item_id):
+        """获取商品的时间信息"""
+        item = self.get_item_by_id(item_id)
+        if not item:
+            return ""
+
+        now = pd.Timestamp.now()
+        buy_time = pd.to_datetime(item['buy_time'])
+        cooling_end = self.get_cooling_end_time(buy_time)
+        
+        if item['goods_state'] == self.STATUS_COOLING:
+            remaining = cooling_end - now
+            if remaining.total_seconds() > 0:
+                days = remaining.days
+                hours = remaining.seconds // 3600
+                minutes = (remaining.seconds % 3600) // 60
+                if days > 0:
+                    return f"(剩余 {days}天{hours}小时)"
+                elif hours > 0:
+                    return f"(剩余 {hours}小时{minutes}分)"
+                else:
+                    return f"(剩余 {minutes}分钟)"
+            else:
+                return "(冷却已结束)"
+        
+        elif item['goods_state'] == self.STATUS_HOLDING:
+            # 从冷却期结束时间开始计算持有时长
+            holding_time = now - cooling_end
+            days = holding_time.days
+            hours = holding_time.seconds // 3600
+            if days > 0:
+                return f"(已持有 {days}天{hours}小时)"
+            else:
+                return f"(已持有 {hours}小时)"
+        
+        return ""
+
     def _read_inventory(self):
         """读取库存数据。
         该方法从库存表中读取所有商品信息。
@@ -327,3 +364,13 @@ class ItemModel:
                 df.to_excel(writer, sheet_name=self.sold_items_sheet, index=False)
         except Exception as e:
             print(f"保存已售商品数据时出错: {str(e)}")
+
+    def get_item_by_id(self, item_id):
+        """获取商品信息"""
+        df = self._read_inventory()
+        item_mask = df['inventory_id'] == item_id
+        
+        if not item_mask.any():
+            return None
+            
+        return df[item_mask].iloc[0].to_dict()

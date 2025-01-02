@@ -141,6 +141,12 @@ class MainController:
             if item['is_stattrak']:
                 name += " (StatTrak™)"
             
+            # 获取状态和时间信息
+            status_text = self.model.get_item_status_text(item['goods_state'])
+            time_info = self.model.get_time_info(item['inventory_id'])
+            if time_info:
+                status_text = f"{status_text} {time_info}"
+            
             # 创建并设置单元格项
             for col, value in enumerate([
                 f" {name} ",  # 添加空格
@@ -149,7 +155,7 @@ class MainController:
                 f" ¥{item['buy_price']:.2f} ",
                 f" {pd.to_datetime(item['buy_time']).strftime('%Y-%m-%d %H:%M')} ",
                 f" ¥{self.model.get_current_price(item['inventory_id']):.2f} ",
-                f" {self.model.get_item_status_text(item['goods_state'])} "
+                f" {status_text} "
             ]):
                 cell_item = QTableWidgetItem(str(value))
                 # 设置背景颜色
