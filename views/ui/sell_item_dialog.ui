@@ -33,6 +33,24 @@
     </layout>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_wear">
+     <item>
+      <widget class="QLabel" name="label_wear">
+       <property name="text">
+        <string>磨损等级:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="wear_label">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QLabel" name="label_2">

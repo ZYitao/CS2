@@ -25,7 +25,8 @@ class SellItemDialog(QDialog):
         if self.item_data.get("is_stattrak", False):
             name += " (StatTrak™)"
         self.item_name_label.setText(name)
-        self.goods_type_label.setText(self.item_data["goods_type"])
+        
+        # 设置磨损值信息
         self.wear_label.setText(f'{self.item_data["goods_wear"]} ({self.item_data["goods_wear_value"]:.4f})')
         self.buy_price_label.setText(f"¥{self.item_data['buy_price']:.2f}")
         
@@ -48,12 +49,9 @@ class SellItemDialog(QDialog):
         sell_price = self.sell_price_input.value()
         extra_income = self.extra_income_input.value()
         profit = sell_price + extra_income - buy_price
-        self.profit_label.setText(
-            f'预计收益: ¥{extra_income:.2f}\n'
-            f'售价: ¥{sell_price:.2f}\n'
-            f'额外收入: ¥{extra_income:.2f}\n'
-            f'成本: ¥{buy_price:.2f}'
-        )
+        
+        # 只显示最终的收益值
+        self.profit_label.setText(f'¥{profit:.2f}')
         
     def get_data(self):
         """获取表单数据"""

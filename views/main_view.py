@@ -6,7 +6,6 @@ from PyQt5.QtCore import Qt
 from PyQt5 import uic
 import os
 from .add_item_dialog import AddItemDialog
-from .adjust_investment_dialog import AdjustInvestmentDialog
 from config.item_types import ITEM_TYPES
 from PyQt5.QtWidgets import QHeaderView
 
@@ -33,27 +32,20 @@ class MainView(QMainWindow):
     def setup_tables(self):
         """设置表格的列和属性"""
         # 设置库存表格
-        headers = ["商品ID", "商品名称", "商品类型", "商品磨损",
-                  "磨损值", "是否暗金", "购买价格", "购买时间",
-                  "当前价格", "商品状态", "操作"]
+        headers = ["商品名称", "商品类型", "商品磨损",
+                  "购买价格", "购买时间", "当前价格", "商品状态", "操作"]
         self.inventory_table.setColumnCount(len(headers))
         self.inventory_table.setHorizontalHeaderLabels(headers)
         
         # 设置已售商品表格
-        sold_headers = ['ID', '商品名称', '类型', '磨损等级', '磨损值',
+        sold_headers = ['商品名称', '类型', '磨损等级', '磨损值',
                        '购买价格', '购买时间', '售出价格', '额外收入',
                        '售出时间', '持有天数', '总收益']
         self.sold_items_table.setColumnCount(len(sold_headers))
         self.sold_items_table.setHorizontalHeaderLabels(sold_headers)
         
-        # 设置统计表格
-        analytics_headers = ["时间段", "总市值", "总收益", "总销售额",
-                           "剩余金额", "商品数量", "已售数量"]
-        self.analytics_table.setColumnCount(len(analytics_headers))
-        self.analytics_table.setHorizontalHeaderLabels(analytics_headers)
-        
         # 设置表格属性
-        for table in [self.inventory_table, self.sold_items_table, self.analytics_table]:
+        for table in [self.inventory_table, self.sold_items_table]:
             table.setEditTriggers(QTableWidget.NoEditTriggers)
             table.setSelectionBehavior(QTableWidget.SelectRows)
             table.setSelectionMode(QTableWidget.SingleSelection)
@@ -72,16 +64,11 @@ class MainView(QMainWindow):
         # 状态筛选
         self.state_combo.addItems(['全部', '冷却期', '持有中', '已售出'])
         
-        # 时间段选择
-        self.period_combo.addItems(["周", "月", "年"])
-        self.period_combo.setCurrentText("月")
-        
     def connect_signals(self):
         """连接信号和槽"""
         # 按钮信号
         self.btn_add.clicked.connect(self.on_add_item)
         self.btn_clear_filter.clicked.connect(self.clear_filters)
-        self.btn_adjust_investment.clicked.connect(self.show_adjust_investment_dialog)
         
         # 筛选器信号
         self.name_filter.textChanged.connect(self.on_filter_changed)
@@ -91,9 +78,6 @@ class MainView(QMainWindow):
         self.state_combo.currentTextChanged.connect(self.on_filter_changed)
         self.price_min.valueChanged.connect(self.on_filter_changed)
         self.price_max.valueChanged.connect(self.on_filter_changed)
-        
-        # 统计相关信号
-        self.period_combo.currentTextChanged.connect(self._on_period_changed)
         
     def on_main_type_changed(self, main_type):
         # 更新子类型下拉框
@@ -146,18 +130,3 @@ class MainView(QMainWindow):
 
     def show_success(self, message):
         QMessageBox.information(self, '成功', message)
-
-    def show_adjust_investment_dialog(self):
-        """显示调整投资额的对话框"""
-        dialog = AdjustInvestmentDialog(self)
-        dialog.exec_()
-
-    def _on_period_changed(self, period):
-        """当时间段选择改变时触发更新"""
-        period_map = {
-            "周": "weekly",
-            "月": "monthly",
-            "年": "yearly"
-        }
-        if self.controller:
-            self.controller.refresh_analytics(period_map[period])
