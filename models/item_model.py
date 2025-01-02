@@ -267,10 +267,32 @@ class ItemModel:
         return self._read_sold_items()
 
     def get_inventory_items(self):
-        """获取库存商品列表。
-        该方法从库存表中读取所有商品信息。
-        """ 
-        return self._read_inventory()
+        """获取库存商品数据"""
+        df = self._read_inventory()
+        if df.empty:
+            return df
+
+        # 创建状态优先级映射
+        status_priority = {
+            self.STATUS_HOLDING: 0,  # 持有中排第一
+            self.STATUS_COOLING: 1,  # 冷却期排第二
+            self.STATUS_SOLD: 2      # 已出售排第三
+        }
+        
+        # 添加状态优先级列
+        df['status_priority'] = df['goods_state'].map(status_priority)
+        
+        # 确保buy_time是datetime类型
+        df['buy_time'] = pd.to_datetime(df['buy_time'])
+        
+        # 按状态优先级和购买时间排序（时间倒序）
+        df = df.sort_values(['status_priority', 'buy_time'], 
+                          ascending=[True, False])
+        
+        # 删除辅助列
+        df = df.drop('status_priority', axis=1)
+        
+        return df
 
     def get_current_price(self, inventory_id):
         """获取商品当前价格
