@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtCore import Qt, QDateTime
 from PyQt5 import uic
 import os
-from config.item_types import ITEM_TYPES
+from config.goods_types import GOODS_TYPES
 
 class AddItemDialog(QDialog):
     def __init__(self, parent=None):
@@ -20,12 +20,12 @@ class AddItemDialog(QDialog):
     def setup_combo_boxes(self):
         """初始化下拉框的选项"""
         # 商品类型
-        self.type_combo.addItems(['全部'] + list(ITEM_TYPES.keys()))
+        self.type_combo.addItems(['全部'] + list(GOODS_TYPES.keys()))
         
         # 商品子类型
         self.subtype_combo.clear()
         if self.type_combo.currentText() != '全部':
-            self.subtype_combo.addItems(ITEM_TYPES[self.type_combo.currentText()][1:])
+            self.subtype_combo.addItems(GOODS_TYPES[self.type_combo.currentText()][1:])
         
         # 磨损等级
         self.wear_combo.addItems(['崭新出厂', '略有磨损', '久经沙场', '破损不堪', '战痕累累'])
@@ -53,7 +53,7 @@ class AddItemDialog(QDialog):
         # 更新子类型列表
         self.subtype_combo.clear()
         if main_type != '全部':
-            self.subtype_combo.addItems(ITEM_TYPES[main_type][1:])  # 排除"全部"选项
+            self.subtype_combo.addItems(GOODS_TYPES[main_type][1:])  # 排除"全部"选项
             
         # 更新暗金选项状态
         is_gun = main_type in ['手枪', '匕首', '步枪']
@@ -66,7 +66,8 @@ class AddItemDialog(QDialog):
         # 构建商品名称：子类型 + StatTrak™（如果选中）
         return {
             'goods_name': self.name_input.text(),
-            'goods_type': self.subtype_combo.currentText(),  # 使用主类型
+            'goods_type': self.type_combo.currentText(),  
+            'sub_type': self.subtype_combo.currentText(),
             'goods_wear': self.wear_combo.currentText(),
             'goods_wear_value': self.wear_value_input.value(),
             'buy_price': self.price_input.value(),

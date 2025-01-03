@@ -31,6 +31,7 @@ class ItemModel:
                 'inventory_id',     # 具体商品的唯一ID（购买日期+磨损值）
                 'goods_name',       # 商品名称
                 'goods_type',       # 商品类型
+                'sub_type',         # 子类型
                 'goods_wear',       # 商品磨损等级
                 'goods_wear_value', # 具体磨损值
                 'is_stattrak',      # 是否暗金
@@ -68,7 +69,7 @@ class ItemModel:
             buy_time = pd.to_datetime(buy_time)
         return f"{buy_time.strftime('%Y%m%d%H%M%S')}_{goods_wear_value:.4f}"
 
-    def add_item(self, goods_name, goods_type, goods_wear, goods_wear_value,
+    def add_item(self, goods_name, goods_type, sub_type, goods_wear, goods_wear_value,
                  is_stattrak=False, buy_price=None, buy_time=None):
         """添加新商品到库存。
         
@@ -92,6 +93,7 @@ class ItemModel:
             'inventory_id': inventory_id,
             'goods_name': goods_name,
             'goods_type': goods_type,
+            'sub_type': sub_type,
             'goods_wear': goods_wear,
             'goods_wear_value': goods_wear_value,
             'is_stattrak': is_stattrak,
@@ -237,6 +239,7 @@ class ItemModel:
             'inventory_id': item['inventory_id'],
             'goods_name': item['goods_name'],
             'goods_type': item['goods_type'],
+            'sub_type': item['sub_type'],
             'goods_wear': item['goods_wear'],
             'goods_wear_value': item['goods_wear_value'],
             'is_stattrak': item['is_stattrak'],

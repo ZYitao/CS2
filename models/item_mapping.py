@@ -15,7 +15,7 @@ class ItemMapping:
             df = pd.DataFrame(columns=[
                 'mapping_id',       # 商品类别ID（相同属性的商品共享同一ID）
                 'item_name',        # 商品名称
-                'item_type',        # 商品类型
+                'goods_type',        # 商品类型
                 'item_wear',        # 商品磨损
                 'is_stattrak',      # 是否暗金
                 'last_used',        # 最后使用时间
@@ -30,7 +30,7 @@ class ItemMapping:
         # 查找匹配的商品类别
         mask = (
             (df['item_name'] == name) &
-            (df['item_type'] == type_) &
+            (df['goods_type'] == type_) &
             (df['item_wear'] == wear) &
             (df['is_stattrak'] == is_stattrak)
         )
@@ -49,7 +49,7 @@ class ItemMapping:
         new_item = pd.DataFrame({
             'mapping_id': [new_id],
             'item_name': [name],
-            'item_type': [type_],
+            'goods_type': [type_],
             'item_wear': [wear],
             'is_stattrak': [is_stattrak],
             'last_used': [pd.Timestamp.now()],

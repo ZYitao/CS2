@@ -4,7 +4,7 @@ from PyQt5.QtGui import QColor
 from datetime import datetime
 import pandas as pd
 from views.sell_item_dialog import SellItemDialog
-from config.item_types import ITEM_TYPES
+from config.goods_types import GOODS_TYPES
 
 class MainController:
     # 定义状态颜色（深色和浅色）
@@ -40,7 +40,7 @@ class MainController:
             QPushButton:pressed {
                 background-color: #3d8b40;
             }
-        """
+        """,
     }
 
     def __init__(self, model, view):
@@ -50,8 +50,8 @@ class MainController:
         # 初始化筛选条件
         self.current_filters = {
             'name': '',
-            'item_type': '全部',
-            'subtype': '全部',  # 添加子类型筛选条件
+            'goods_type': '全部',
+            'sub_type': '全部',  # 添加子类型筛选条件
             'wear': '全部',
             'state': '全部',
             'price_min': 0,
@@ -66,6 +66,7 @@ class MainController:
                 self.model.add_item(
                     goods_name=data['goods_name'],
                     goods_type=data['goods_type'],
+                    sub_type=data['sub_type'],
                     goods_wear=data['goods_wear'],
                     goods_wear_value=data['goods_wear_value'],
                     is_stattrak=data['is_stattrak'],
@@ -77,11 +78,10 @@ class MainController:
             except Exception as e:
                 self.view.show_error(f'添加商品失败: {str(e)}')
 
-    def apply_filters(self, name='', item_type='全部', subtype='全部', wear='全部', state='全部', price_min=0, price_max=0):
+    def apply_filters(self, goods_type='全部', sub_type='全部', wear='全部', state='全部', price_min=0, price_max=0):
         self.current_filters = {
-            'name': name,
-            'item_type': item_type,
-            'subtype': subtype,
+            'goods_type': goods_type,
+            'sub_type': sub_type,
             'wear': wear,
             'state': state,
             'price_min': price_min,
@@ -170,7 +170,9 @@ class MainController:
             for col, value in enumerate([
                 f" {name} ",  # 添加空格
                 f" {item['goods_type']} ",
-                f" {item['goods_wear']} ({item['goods_wear_value']:.4f}) ",
+                f" {item['sub_type']} ",
+                f" {item['goods_wear']} ",
+                f" {item['goods_wear_value']:.4f} ",
                 f" ¥{item['buy_price']:.2f} ",
                 f" {pd.to_datetime(item['buy_time']).strftime('%Y-%m-%d %H:%M')} ",
                 f" ¥{self.model.get_current_price(item['inventory_id']):.2f} ",
@@ -189,7 +191,8 @@ class MainController:
                 sell_btn = QPushButton("出售")
                 sell_btn.setStyleSheet(self.BUTTON_STYLES["出售"])
                 sell_btn.clicked.connect(lambda checked, id=item['inventory_id']: self.sell_item(id))
-                self.view.inventory_table.setCellWidget(row, 7, sell_btn)
+                self.view.inventory_table.setCellWidget(row, 9, sell_btn)
+
 
         # 调整列宽
         self.view.inventory_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -214,17 +217,24 @@ class MainController:
             if item['is_stattrak']:
                 name += " (StatTrak™)"
             
-            self.view.sold_items_table.setItem(row, 0, QTableWidgetItem(name))
-            self.view.sold_items_table.setItem(row, 1, QTableWidgetItem(item['goods_type']))
-            self.view.sold_items_table.setItem(row, 2, QTableWidgetItem(item['goods_wear']))
-            self.view.sold_items_table.setItem(row, 3, QTableWidgetItem(f"{item['goods_wear_value']:.4f}"))
-            self.view.sold_items_table.setItem(row, 4, QTableWidgetItem(f"¥{item['buy_price']:.2f}"))
-            self.view.sold_items_table.setItem(row, 5, QTableWidgetItem(pd.to_datetime(item['buy_time']).strftime('%Y-%m-%d %H:%M')))
-            self.view.sold_items_table.setItem(row, 6, QTableWidgetItem(f"¥{item['sell_price']:.2f}"))
-            self.view.sold_items_table.setItem(row, 7, QTableWidgetItem(f"¥{item['extra_income']:.2f}"))
-            self.view.sold_items_table.setItem(row, 8, QTableWidgetItem(pd.to_datetime(item['sell_time']).strftime('%Y-%m-%d %H:%M')))
-            self.view.sold_items_table.setItem(row, 9, QTableWidgetItem(str(item['hold_days'])))
-            self.view.sold_items_table.setItem(row, 10, QTableWidgetItem(f"¥{item['total_profit']:.2f}"))
+            for col, value in enumerate([
+                f" {name} ",  # 添加空格
+                f" {item['goods_type']} ",
+                f" {item['sub_type']} ",
+                f" {item['goods_wear']} ",
+                f" {item['goods_wear_value']:.4f} ",
+                f" ¥{item['buy_price']:.2f} ",
+                f" {pd.to_datetime(item['buy_time']).strftime('%Y-%m-%d %H:%M')} ",
+                f" ¥{item['sell_price']:.2f} ",
+                f" ¥{item['extra_income']:.2f} ",
+                f" {pd.to_datetime(item['sell_time']).strftime('%Y-%m-%d %H:%M')} ",
+                f" {item['hold_days']} ",
+                f" ¥{item['total_profit']:.2f} "
+            ]):
+                cell_item = QTableWidgetItem(str(value))
+                # 设置文本居中对齐
+                cell_item.setTextAlignment(Qt.AlignCenter)
+                self.view.sold_items_table.setItem(row, col, cell_item)
 
         # 调整列宽
         self.view.sold_items_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -233,20 +243,15 @@ class MainController:
         """应用筛选条件"""
         filtered_df = df.copy()
 
-        # 应用名称筛选
-        if self.current_filters['name']:
-            filtered_df = filtered_df[filtered_df['goods_name'].str.contains(self.current_filters['name'], case=False)]
-
         # 应用商品类型筛选
-        if self.current_filters['item_type'] != '全部':
-            if self.current_filters['subtype'] != '全部':
+        if self.current_filters['goods_type'] != '全部':
+            if self.current_filters['sub_type'] != '全部':
                 # 如果选择了具体子类型，直接用子类型筛选
-                filtered_df = filtered_df[filtered_df['goods_type'] == self.current_filters['subtype']]
+                filtered_df = filtered_df[filtered_df['sub_type'] == self.current_filters['sub_type']]
             else:
                 # 如果选择了全部，使用该大类下的所有子类型筛选
-                subtypes = ITEM_TYPES[self.current_filters['item_type']][1:]  # 排除"全部"选项
-                print(subtypes)
-                filtered_df = filtered_df[filtered_df['goods_type'].isin(subtypes)]
+                subtypes = GOODS_TYPES[self.current_filters['goods_type']][1:]  # 排除"全部"选项
+                filtered_df = filtered_df[filtered_df['sub_type'].isin(subtypes)]
 
         # 应用磨损等级筛选
         if self.current_filters['wear'] != '全部':

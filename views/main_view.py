@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt
 from PyQt5 import uic
 import os
 from .add_item_dialog import AddItemDialog
-from config.item_types import ITEM_TYPES
+from config.goods_types import GOODS_TYPES
 from PyQt5.QtWidgets import QHeaderView
 
 class MainView(QMainWindow):
@@ -32,15 +32,16 @@ class MainView(QMainWindow):
     def setup_tables(self):
         """设置表格的列和属性"""
         # 设置库存表格
-        headers = ["商品名称", "商品类型", "商品磨损",
-                  "购买价格", "购买时间", "当前价格", "商品状态", "操作"]
+        headers = ["商品名称", "商品类型", "具体类型", "磨损等级", 
+                    "磨损值", "购买价格", "购买时间", "当前价格", 
+                    "商品状态", "操作"]
         self.inventory_table.setColumnCount(len(headers))
         self.inventory_table.setHorizontalHeaderLabels(headers)
         
         # 设置已售商品表格
-        sold_headers = ['商品名称', '类型', '磨损等级', '磨损值',
-                       '购买价格', '购买时间', '售出价格', '额外收入',
-                       '售出时间', '持有天数', '总收益']
+        sold_headers = ['商品名称', '商品类型', '具体类型', '磨损等级', 
+                        '磨损值','购买价格', '购买时间', '售出价格', 
+                        '额外收入', '售出时间', '持有天数', '总收益']
         self.sold_items_table.setColumnCount(len(sold_headers))
         self.sold_items_table.setHorizontalHeaderLabels(sold_headers)
         
@@ -55,8 +56,8 @@ class MainView(QMainWindow):
     def setup_filters(self):
         """初始化筛选器"""
         # 商品类型筛选
-        self.type_filter.addItems(ITEM_TYPES.keys())
-        self.subtype_filter.addItems(ITEM_TYPES['全部'])
+        self.type_filter.addItems(GOODS_TYPES.keys())
+        self.subtype_filter.addItems(GOODS_TYPES['全部'])
         
         # 磨损等级筛选
         self.wear_filter.addItems(['全部', '崭新出厂', '略有磨损', '久经沙场', '破损不堪', '战痕累累'])
@@ -81,7 +82,7 @@ class MainView(QMainWindow):
     def on_main_type_changed(self, main_type):
         # 更新子类型下拉框
         self.subtype_filter.clear()
-        self.subtype_filter.addItems(ITEM_TYPES[main_type])
+        self.subtype_filter.addItems(GOODS_TYPES[main_type])
         self.subtype_filter.setCurrentText('全部')
         # 触发筛选更新
         self.on_filter_changed()
@@ -98,13 +99,10 @@ class MainView(QMainWindow):
 
     def on_filter_changed(self):
         if self.controller:
-            main_type = self.type_filter.currentText()
-            sub_type = self.subtype_filter.currentText()
-            
             # 确保传递正确的子类型
             self.controller.apply_filters(
-                item_type=main_type,
-                subtype=sub_type,  
+                goods_type=self.type_filter.currentText(),
+                sub_type=self.subtype_filter.currentText(),  
                 wear=self.wear_filter.currentText(),
                 state=self.state_combo.currentText(),
                 price_min=self.price_min.value(),
@@ -114,7 +112,7 @@ class MainView(QMainWindow):
     def clear_filters(self):
         self.type_filter.setCurrentText('全部')
         self.subtype_filter.clear()
-        self.subtype_filter.addItems(ITEM_TYPES['全部'])
+        self.subtype_filter.addItems(GOODS_TYPES['全部'])
         self.wear_filter.setCurrentText('全部')
         self.state_combo.setCurrentText('全部')
         self.price_min.setValue(0)
