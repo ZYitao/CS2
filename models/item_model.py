@@ -15,7 +15,13 @@ class ItemModel:
         self.file_path = file_path
         self.inventory_sheet = 'inventory'
         self.sold_items_sheet = 'sold_items'
+        # 添加内存缓存
+        self._inventory_cache = None
+        self._sold_items_cache = None
+        self._cache_is_dirty = False
         self._ensure_file_exists()
+        # 初始化时加载缓存
+        self._load_cache()
 
     def _ensure_file_exists(self):
         """确保文件存在，不存在则创建。
@@ -58,6 +64,52 @@ class ItemModel:
             with pd.ExcelWriter(self.file_path) as writer:
                 inventory_df.to_excel(writer, sheet_name=self.inventory_sheet, index=False)
                 sold_items_df.to_excel(writer, sheet_name=self.sold_items_sheet, index=False)
+
+    def _load_cache(self):
+        """从文件加载数据到内存缓存"""
+        try:
+            with pd.ExcelFile(self.file_path) as xls:
+                self._inventory_cache = pd.read_excel(xls, self.inventory_sheet)
+                self._sold_items_cache = pd.read_excel(xls, self.sold_items_sheet)
+            self._cache_is_dirty = False
+        except Exception as e:
+            print(f"加载缓存时出错: {str(e)}")
+            self._inventory_cache = pd.DataFrame()
+            self._sold_items_cache = pd.DataFrame()
+
+    def _save_cache_to_file(self):
+        """将缓存写入文件（仅在缓存被修改时）"""
+        if not self._cache_is_dirty:
+            return
+        
+        try:
+            with pd.ExcelWriter(self.file_path, engine='openpyxl') as writer:
+                self._inventory_cache.to_excel(writer, sheet_name=self.inventory_sheet, index=False)
+                self._sold_items_cache.to_excel(writer, sheet_name=self.sold_items_sheet, index=False)
+            self._cache_is_dirty = False
+        except Exception as e:
+            print(f"保存缓存到文件时出错: {str(e)}")
+            raise
+
+    def _read_inventory(self):
+        """从缓存读取库存数据"""
+        return self._inventory_cache.copy()
+
+    def _read_sold_items(self):
+        """从缓存读取已售商品数据"""
+        return self._sold_items_cache.copy()
+
+    def _save_inventory(self, df):
+        """保存库存数据到缓存"""
+        self._inventory_cache = df.copy()
+        self._cache_is_dirty = True
+        self._save_cache_to_file()
+
+    def _save_sold_items(self, df):
+        """保存已售商品数据到缓存"""
+        self._sold_items_cache = df.copy()
+        self._cache_is_dirty = True
+        self._save_cache_to_file()
 
     def _generate_inventory_id(self, buy_time, goods_wear_value):
         """生成商品唯一ID。
@@ -110,8 +162,7 @@ class ItemModel:
             df = pd.concat([df, pd.DataFrame([new_item])], ignore_index=True)
             
             # 保存数据
-            with pd.ExcelWriter(self.file_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
-                df.to_excel(writer, sheet_name=self.inventory_sheet, index=False)
+            self._save_inventory(df)
                 
             return True
         except Exception as e:
@@ -348,42 +399,6 @@ class ItemModel:
                 return f"(已持有 {hours}小时)"
         
         return ""
-
-    def _read_inventory(self):
-        """读取库存数据。
-        该方法从库存表中读取所有商品信息。
-        """ 
-        try:
-            return pd.read_excel(self.file_path, sheet_name=self.inventory_sheet)
-        except Exception as e:
-            print(f"读取库存数据时出错: {str(e)}")
-            return pd.DataFrame()
-
-    def _read_sold_items(self):
-        """读取已售商品数据。
-        该方法从已售商品表中读取所有商品信息。
-        """ 
-        try:
-            return pd.read_excel(self.file_path, sheet_name=self.sold_items_sheet)
-        except Exception as e:
-            print(f"读取已售商品数据时出错: {str(e)}")
-            return pd.DataFrame()
-
-    def _save_inventory(self, df):
-        """保存库存数据到Excel文件"""
-        try:
-            with pd.ExcelWriter(self.file_path, mode='a', if_sheet_exists='replace') as writer:
-                df.to_excel(writer, sheet_name=self.inventory_sheet, index=False)
-        except Exception as e:
-            print(f"保存库存数据时出错: {str(e)}")
-
-    def _save_sold_items(self, df):
-        """保存已售商品数据到Excel文件"""
-        try:
-            with pd.ExcelWriter(self.file_path, mode='a', if_sheet_exists='replace') as writer:
-                df.to_excel(writer, sheet_name=self.sold_items_sheet, index=False)
-        except Exception as e:
-            print(f"保存已售商品数据时出错: {str(e)}")
 
     def get_item_by_id(self, item_id):
         """获取商品信息"""
