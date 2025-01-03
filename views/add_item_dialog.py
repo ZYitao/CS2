@@ -20,7 +20,7 @@ class AddItemDialog(QDialog):
     def setup_combo_boxes(self):
         """初始化下拉框的选项"""
         # 商品类型
-        self.type_combo.addItems(['全部'] + list(GOODS_TYPES.keys()))
+        self.type_combo.addItems(list(GOODS_TYPES.keys()))
         
         # 商品子类型
         self.subtype_combo.clear()
