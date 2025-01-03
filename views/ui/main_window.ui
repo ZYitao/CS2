@@ -202,63 +202,181 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_avg_profit_title">
-             <property name="text">
-              <string>平均利润:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLabel" name="label_avg_profit">
-             <property name="text">
-              <string>¥0.00</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLabel" name="label_avg_days_title">
-             <property name="text">
-              <string>平均持有天数:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="3">
-            <widget class="QLabel" name="label_avg_days">
-             <property name="text">
-              <string>0</string>
-             </property>
-            </widget>
-           </item>
           </layout>
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="groupBox_charts">
-          <property name="title">
-           <string>数据图表</string>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
           </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_stats">
+          <property name="title">
+           <string>数据统计</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_stats">
            <item>
-            <widget class="QTabWidget" name="chart_tabs">
-             <property name="currentIndex">
-              <number>0</number>
-             </property>
-             <widget class="QWidget" name="tab_profit_by_type">
-              <attribute name="title">
-               <string>类型分布</string>
-              </attribute>
-              <layout class="QVBoxLayout" name="layout_profit_by_type"/>
-             </widget>
-             <widget class="QWidget" name="tab_profit_trend">
-              <attribute name="title">
-               <string>利润趋势</string>
-              </attribute>
-              <layout class="QVBoxLayout" name="layout_profit_trend"/>
-             </widget>
-            </widget>
+            <layout class="QGridLayout" name="gridLayout_stats">
+             <item row="0" column="0">
+              <widget class="QLabel" name="lbl_total_investment">
+               <property name="styleSheet">
+                <string notr="true">font-size: 14px;
+padding: 5px;
+margin: 2px;</string>
+               </property>
+               <property name="text">
+                <string>总投资: 0.00</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="lbl_total_profit">
+               <property name="styleSheet">
+                <string notr="true">font-size: 14px;
+padding: 5px;
+margin: 2px;</string>
+               </property>
+               <property name="text">
+                <string>总收益: 0.00</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="lbl_remaining_amount">
+               <property name="styleSheet">
+                <string notr="true">font-size: 14px;
+padding: 5px;
+margin: 2px;</string>
+               </property>
+               <property name="text">
+                <string>剩余金额: 0.00</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLabel" name="lbl_total_fee">
+               <property name="styleSheet">
+                <string notr="true">font-size: 14px;
+padding: 5px;
+margin: 2px;</string>
+               </property>
+               <property name="text">
+                <string>总手续费: 0.00</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="lbl_purchase_market_value">
+               <property name="styleSheet">
+                <string notr="true">font-size: 14px;
+padding: 5px;
+margin: 2px;</string>
+               </property>
+               <property name="text">
+                <string>购买市值: 0.00</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLabel" name="lbl_current_market_value">
+               <property name="styleSheet">
+                <string notr="true">font-size: 14px;
+padding: 5px;
+margin: 2px;</string>
+               </property>
+               <property name="text">
+                <string>当前市值: 0.00</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_stats_buttons">
+             <item>
+              <widget class="QPushButton" name="btn_adjust_investment">
+               <property name="styleSheet">
+                <string notr="true">QPushButton {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+QPushButton:hover {
+    background-color: #45a049;
+}
+QPushButton:pressed {
+    background-color: #3d8b40;
+}</string>
+               </property>
+               <property name="text">
+                <string>调整总投资</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btn_add_fee">
+               <property name="styleSheet">
+                <string notr="true">QPushButton {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+QPushButton:hover {
+    background-color: #45a049;
+}
+QPushButton:pressed {
+    background-color: #3d8b40;
+}</string>
+               </property>
+               <property name="text">
+                <string>添加手续费</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
           </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_charts">
+       <attribute name="title">
+        <string>数据图表</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="QTabWidget" name="chart_tabs">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="tab_profit_by_type">
+           <attribute name="title">
+            <string>类型分布</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="layout_profit_by_type"/>
+          </widget>
+          <widget class="QWidget" name="tab_profit_trend">
+           <attribute name="title">
+            <string>利润趋势</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="layout_profit_trend"/>
+          </widget>
          </widget>
         </item>
        </layout>

@@ -60,68 +60,7 @@ class MainController:
         }
         self._update_tables()
         self._update_analysis()
-
-    def add_item(self):
-        data = self.view.show_add_dialog()
-        if data:
-            try:
-                self.model.add_item(
-                    goods_name=data['goods_name'],
-                    goods_type=data['goods_type'],
-                    sub_type=data['sub_type'],
-                    goods_wear=data['goods_wear'],
-                    goods_wear_value=data['goods_wear_value'],
-                    is_stattrak=data['is_stattrak'],
-                    buy_price=data['buy_price'],
-                    buy_time=data['buy_time']
-                )
-                self.view.show_success('商品添加成功')
-                self._update_tables()
-            except Exception as e:
-                self.view.show_error(f'添加商品失败: {str(e)}')
-
-    def apply_filters(self, goods_type='全部', sub_type='全部', wear='全部', state='全部', price_min=0, price_max=0):
-        self.current_filters = {
-            'goods_type': goods_type,
-            'sub_type': sub_type,
-            'wear': wear,
-            'state': state,
-            'price_min': price_min,
-            'price_max': price_max if price_max > 0 else float('inf')
-        }
-        self._update_tables()
-
-    def sell_item(self, inventory_id):
-        """出售商品"""
-        # 检查是否可以出售
-        can_sell, message = self.model.can_sell_item(inventory_id)
-        if not can_sell:
-            self.view.show_error(message)
-            return
-
-        # 获取商品详情
-        item = self.model.get_item_by_id(inventory_id)
-        if item is None:
-            self.view.show_error('商品不存在')
-            return
-
-        # 显示出售对话框
-        dialog = SellItemDialog(item, self.view)
-        if dialog.exec_() == QDialog.Accepted:
-            sell_data = dialog.get_data()
-            success, message = self.model.sell_item(
-                inventory_id=inventory_id,
-                sell_price=sell_data['sell_price'],
-                extra_income=sell_data['extra_income'],
-                sell_time=sell_data['sell_time']
-            )
-            
-            if success:
-                self.view.show_success(message)
-                self._update_tables()
-                self._update_analysis()  # 更新数据分析
-            else:
-                self.view.show_error(message)
+        self._update_statistics()  # 添加统计信息更新
 
     def _update_tables(self):
         """更新所有表格数据"""
@@ -152,11 +91,9 @@ class MainController:
         self._update_profit_trend_chart(sold_df)
 
     def _update_summary_labels(self, total_profit, total_items, avg_profit, avg_days):
-        """更新汇总数据标签"""
+        """更新汇总标签"""
         self.view.label_total_profit.setText(f"¥{total_profit:.2f}")
         self.view.label_total_items.setText(str(total_items))
-        self.view.label_avg_profit.setText(f"¥{avg_profit:.2f}")
-        self.view.label_avg_days.setText(f"{avg_days:.1f}")
 
     def _update_profit_by_type_chart(self, df):
         """更新按类型分布的饼图"""
@@ -239,15 +176,6 @@ class MainController:
         """清除所有图表"""
         self._clear_layout(self.view.layout_profit_by_type)
         self._clear_layout(self.view.layout_profit_trend)
-
-    def _clear_layout(self, layout):
-        """清除布局中的所有部件"""
-        if layout is not None:
-            while layout.count():
-                item = layout.takeAt(0)
-                widget = item.widget()
-                if widget is not None:
-                    widget.deleteLater()
 
     def _update_inventory_table(self):
         """更新库存表格"""
@@ -396,3 +324,88 @@ class MainController:
             filtered_df = filtered_df[filtered_df['buy_price'] <= self.current_filters['price_max']]
 
         return filtered_df
+
+    def _update_statistics(self):
+        """更新统计信息"""
+        stats = self.model.get_data_statistics()
+        self.view.update_statistics_labels(stats)
+
+    def update_total_investment(self, amount_change):
+        """更新总投资额"""
+        try:
+            self.model.update_total_investment(amount_change)
+            self._update_statistics()
+            self.view.show_success('总投资更新成功')
+        except Exception as e:
+            self.view.show_error(f'更新总投资失败: {str(e)}')
+
+    def add_fee(self, fee_amount):
+        """添加手续费"""
+        try:
+            self.model.add_fee(fee_amount)
+            self._update_statistics()
+            self.view.show_success('手续费添加成功')
+        except Exception as e:
+            self.view.show_error(f'添加手续费失败: {str(e)}')
+
+    def add_item(self):
+        data = self.view.show_add_dialog()
+        if data:
+            try:
+                self.model.add_item(
+                    goods_name=data['goods_name'],
+                    goods_type=data['goods_type'],
+                    sub_type=data['sub_type'],
+                    goods_wear=data['goods_wear'],
+                    goods_wear_value=data['goods_wear_value'],
+                    is_stattrak=data['is_stattrak'],
+                    buy_price=data['buy_price'],
+                    buy_time=data['buy_time']
+                )
+                self.view.show_success('商品添加成功')
+                self._update_tables()
+                self._update_statistics()  # 更新统计信息
+            except Exception as e:
+                self.view.show_error(f'添加商品失败: {str(e)}')
+
+    def sell_item(self, inventory_id):
+        """出售商品"""
+        # 检查是否可以出售
+        can_sell, message = self.model.can_sell_item(inventory_id)
+        if not can_sell:
+            self.view.show_error(message)
+            return
+
+        # 获取商品详情
+        item = self.model.get_item_by_id(inventory_id)
+        if item is None:
+            self.view.show_error('商品不存在')
+            return
+
+        # 显示出售对话框
+        dialog = SellItemDialog(item, self.view)
+        if dialog.exec_() == QDialog.Accepted:
+            sell_data = dialog.get_data()
+            success, message = self.model.sell_item(
+                inventory_id=inventory_id,
+                sell_price=sell_data['sell_price'],
+                extra_income=sell_data['extra_income'],
+                sell_time=sell_data['sell_time']
+            )
+            
+            if success:
+                self.view.show_success(message)
+                self._update_tables()
+                self._update_analysis()
+                self._update_statistics()  # 更新统计信息
+            else:
+                self.view.show_error(message)
+
+    def _clear_layout(self, layout):
+        """清除布局中的所有部件"""
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()

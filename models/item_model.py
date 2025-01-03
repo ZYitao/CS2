@@ -15,9 +15,11 @@ class ItemModel:
         self.file_path = file_path
         self.inventory_sheet = 'inventory'
         self.sold_items_sheet = 'sold_items'
+        self.data_gather_sheet = 'data_gather'  # 新增数据统计表
         # 添加内存缓存
         self._inventory_cache = None
         self._sold_items_cache = None
+        self._data_gather_cache = None
         self._cache_is_dirty = False
         self._ensure_file_exists()
         # 初始化时加载缓存
@@ -50,20 +52,31 @@ class ItemModel:
                 'goods_state',      # 商品状态（冷却中/持有中）
             ]
             
-            # 创建DataFrame
-            inventory_df = pd.DataFrame(columns=inventory_columns)
-            sold_items_df = pd.DataFrame(columns=base_columns + [
+            # 创建已售商品表
+            sold_items_columns = base_columns + [
                 'sell_price',      # 售出价格
                 'sell_time',       # 售出时间
                 'extra_income',    # 额外收入
                 'hold_days',       # 持有天数
                 'total_profit'     # 总收益
-            ])
+            ]
+            
+            # 新增数据统计表
+            data_gather_columns = {
+                'name': ['total_investment', 'total_profit', 'remaining_amount', 'total_fee'],
+                'value': [0.0, 0.0, 0.0, 0.0]
+            }
+            
+            # 创建DataFrame
+            inventory_df = pd.DataFrame(columns=inventory_columns)
+            sold_items_df = pd.DataFrame(columns=sold_items_columns)
+            data_gather_df = pd.DataFrame(data_gather_columns)
             
             # 保存到Excel
             with pd.ExcelWriter(self.file_path) as writer:
                 inventory_df.to_excel(writer, sheet_name=self.inventory_sheet, index=False)
                 sold_items_df.to_excel(writer, sheet_name=self.sold_items_sheet, index=False)
+                data_gather_df.to_excel(writer, sheet_name=self.data_gather_sheet, index=False)
 
     def _load_cache(self):
         """从文件加载数据到内存缓存"""
@@ -71,11 +84,48 @@ class ItemModel:
             with pd.ExcelFile(self.file_path) as xls:
                 self._inventory_cache = pd.read_excel(xls, self.inventory_sheet)
                 self._sold_items_cache = pd.read_excel(xls, self.sold_items_sheet)
+                
+                # 检查是否需要创建或迁移data_gather表
+                if self.data_gather_sheet not in xls.sheet_names:
+                    self._create_data_gather_sheet()
+                else:
+                    self._data_gather_cache = pd.read_excel(xls, self.data_gather_sheet)
+                    
             self._cache_is_dirty = False
         except Exception as e:
             print(f"加载缓存时出错: {str(e)}")
             self._inventory_cache = pd.DataFrame()
             self._sold_items_cache = pd.DataFrame()
+            self._create_data_gather_sheet()
+
+    def _create_data_gather_sheet(self):
+        """创建数据统计表"""
+        try:
+            # 计算现有数据的统计信息
+            total_investment = 0.0  # 初始总投资为0
+            
+            # 计算总收益（从已售出商品）
+            total_profit = self._sold_items_cache['total_profit'].sum() if not self._sold_items_cache.empty else 0.0
+            
+            # 计算剩余金额（总投资 + 总收益 - 在途资金）
+            in_stock_amount = self._inventory_cache['buy_price'].sum() if not self._inventory_cache.empty else 0.0
+            remaining_amount = total_investment + total_profit - in_stock_amount
+            
+            # 创建数据统计表
+            self._data_gather_cache = pd.DataFrame({
+                'name': ['total_investment', 'total_profit', 'remaining_amount', 'total_fee'],
+                'value': [total_investment, total_profit, remaining_amount, 0.0]
+            })
+            
+            self._cache_is_dirty = True
+            self._save_cache_to_file()
+        except Exception as e:
+            print(f"创建统计数据表时出错: {str(e)}")
+            # 创建一个空的数据统计表
+            self._data_gather_cache = pd.DataFrame({
+                'name': ['total_investment', 'total_profit', 'remaining_amount', 'total_fee'],
+                'value': [0.0, 0.0, 0.0, 0.0]
+            })
 
     def _save_cache_to_file(self):
         """将缓存写入文件（仅在缓存被修改时）"""
@@ -86,6 +136,7 @@ class ItemModel:
             with pd.ExcelWriter(self.file_path, engine='openpyxl') as writer:
                 self._inventory_cache.to_excel(writer, sheet_name=self.inventory_sheet, index=False)
                 self._sold_items_cache.to_excel(writer, sheet_name=self.sold_items_sheet, index=False)
+                self._data_gather_cache.to_excel(writer, sheet_name=self.data_gather_sheet, index=False)
             self._cache_is_dirty = False
         except Exception as e:
             print(f"保存缓存到文件时出错: {str(e)}")
@@ -163,6 +214,13 @@ class ItemModel:
             
             # 保存数据
             self._save_inventory(df)
+            
+            # 更新剩余金额
+            data_gather_df = self._data_gather_cache
+            remaining_amount_idx = data_gather_df[data_gather_df['name'] == 'remaining_amount'].index[0]
+            data_gather_df.at[remaining_amount_idx, 'value'] -= buy_price
+            self._cache_is_dirty = True
+            self._save_cache_to_file()
                 
             return True
         except Exception as e:
@@ -261,59 +319,55 @@ class ItemModel:
             
         return True, "可以出售"
 
-    def sell_item(self, inventory_id, sell_price, extra_income, sell_time):
+    def sell_item(self, inventory_id, sell_price, extra_income=0, sell_time=None):
         """出售商品。
         该方法根据商品的唯一ID找到对应商品，
         检查其状态是否为持有中，
         如果可以出售，则将商品信息复制到已售商品表中，
         并更新原商品状态为已售出。
         """ 
-        df = self._read_inventory()
-        item_mask = df['inventory_id'] == inventory_id
-        
-        if not item_mask.any():
-            return False, "商品不存在"
-        
-        item = df[item_mask].iloc[0]
+        if sell_time is None:
+            sell_time = datetime.now()
 
-        if item['goods_state'] != self.STATUS_HOLDING:
-            return False, "商品状态不正确"
+        inventory_df = self._read_inventory()
+        item = inventory_df[inventory_df['inventory_id'] == inventory_id].iloc[0]
         
         # 计算持有天数和总收益
-        buy_time = pd.to_datetime(item['buy_time'])
-        sell_time = pd.to_datetime(sell_time)
-        hold_days = (sell_time - buy_time).days
+        hold_days = (pd.to_datetime(sell_time) - pd.to_datetime(item['buy_time'])).days
         total_profit = sell_price + extra_income - item['buy_price']
         
-        # 创建已售商品记录（只保留基础属性和销售相关属性）
-        sold_item = pd.Series({
-            'inventory_id': item['inventory_id'],
-            'goods_name': item['goods_name'],
-            'goods_type': item['goods_type'],
-            'sub_type': item['sub_type'],
-            'goods_wear': item['goods_wear'],
-            'goods_wear_value': item['goods_wear_value'],
-            'is_stattrak': item['is_stattrak'],
-            'buy_price': item['buy_price'],
-            'buy_time': item['buy_time'],
-            'sell_price': sell_price,
-            'sell_time': sell_time,
-            'extra_income': extra_income,
-            'hold_days': hold_days,
-            'total_profit': total_profit
-        })
+        # 创建已售商品记录
+        sold_item = item.copy()
+        sold_item['sell_price'] = sell_price
+        sold_item['sell_time'] = sell_time
+        sold_item['extra_income'] = extra_income
+        sold_item['hold_days'] = hold_days
+        sold_item['total_profit'] = total_profit
         
-        # 更新库存中商品状态为已售出
-        idx = df[item_mask].index[0]
-        df.at[idx, 'goods_state'] = self.STATUS_SOLD
-        self._save_inventory(df)
-        
-        # 添加到已售商品表
-        sold_df = self._read_sold_items()
-        sold_df = pd.concat([sold_df, pd.DataFrame([sold_item])], ignore_index=True)
-        self._save_sold_items(sold_df)
-        
-        return True, "商品出售成功"
+        try:
+            # 更新已售商品表
+            sold_df = self._read_sold_items()
+            sold_df = pd.concat([sold_df, pd.DataFrame([sold_item])], ignore_index=True)
+            self._save_sold_items(sold_df)
+            
+            # 从库存中删除
+            inventory_df = inventory_df[inventory_df['inventory_id'] != inventory_id]
+            self._save_inventory(inventory_df)
+            
+            # 更新数据统计
+            data_gather_df = self._data_gather_cache
+            total_profit_idx = data_gather_df[data_gather_df['name'] == 'total_profit'].index[0]
+            remaining_amount_idx = data_gather_df[data_gather_df['name'] == 'remaining_amount'].index[0]
+            
+            data_gather_df.at[total_profit_idx, 'value'] += total_profit
+            data_gather_df.at[remaining_amount_idx, 'value'] += sell_price + extra_income
+            
+            self._cache_is_dirty = True
+            self._save_cache_to_file()
+            
+            return True, "商品售出成功"
+        except Exception as e:
+            return False, f"售出商品时出错: {str(e)}"
 
     def get_sold_items(self):
         """获取已售商品列表。
@@ -346,7 +400,7 @@ class ItemModel:
         
         # 按状态优先级和购买时间排序（时间倒序）
         df = df.sort_values(['status_priority', 'buy_time'], 
-                        ascending=[True, True])
+                        ascending=[True, False])
         
         # 删除辅助列
         df = df.drop('status_priority', axis=1)
@@ -409,3 +463,54 @@ class ItemModel:
             return None
             
         return df[item_mask].iloc[0].to_dict()
+
+    def get_data_statistics(self):
+        """获取数据统计信息"""
+        stats = {
+            'total_investment': 0.0,
+            'total_profit': 0.0,
+            'remaining_amount': 0.0,
+            'total_fee': 0.0,
+            'purchase_market_value': 0.0,
+            'current_market_value': 0.0
+        }
+        
+        try:
+            # 从缓存中获取基础数据
+            for _, row in self._data_gather_cache.iterrows():
+                stats[row['name']] = float(row['value'])
+            
+            # 计算购买市值（当前库存商品的购买价格总和）
+            inventory_df = self._read_inventory()
+            stats['purchase_market_value'] = inventory_df['buy_price'].sum() if not inventory_df.empty else 0.0
+            
+            # 当前市值需要从外部更新current_price后计算
+            stats['current_market_value'] = 0.0  # 这个值需要在更新当前价格后重新计算
+        except Exception as e:
+            print(f"获取统计数据时出错: {str(e)}")
+        
+        return stats
+
+    def update_total_investment(self, amount_change):
+        """更新总投资额"""
+        df = self._data_gather_cache
+        total_investment_idx = df[df['name'] == 'total_investment'].index[0]
+        remaining_amount_idx = df[df['name'] == 'remaining_amount'].index[0]
+        
+        df.at[total_investment_idx, 'value'] += amount_change
+        df.at[remaining_amount_idx, 'value'] += amount_change
+        
+        self._cache_is_dirty = True
+        self._save_cache_to_file()
+
+    def add_fee(self, fee_amount):
+        """添加手续费"""
+        df = self._data_gather_cache
+        total_fee_idx = df[df['name'] == 'total_fee'].index[0]
+        remaining_amount_idx = df[df['name'] == 'remaining_amount'].index[0]
+        
+        df.at[total_fee_idx, 'value'] += fee_amount
+        df.at[remaining_amount_idx, 'value'] -= fee_amount
+        
+        self._cache_is_dirty = True
+        self._save_cache_to_file()

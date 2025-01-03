@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QTableWidget, QTableWidgetItem, QTabWidget,
                              QLabel, QLineEdit, QComboBox, QDoubleSpinBox, QMessageBox,
-                             QGroupBox, QDialog)
+                             QGroupBox, QDialog, QInputDialog, QGridLayout)
 from PyQt5.QtCore import Qt
 from PyQt5 import uic
 import os
@@ -30,7 +30,7 @@ class MainView(QMainWindow):
         self.connect_signals()
         
     def setup_tables(self):
-        """设置表格的列和属性"""
+        """设置表格属性"""
         # 设置库存表格
         headers = ["商品名称", "商品类型", "具体类型", "磨损等级", 
                     "磨损值", "购买价格", "购买时间", "当前价格", 
@@ -66,29 +66,24 @@ class MainView(QMainWindow):
         self.state_combo.addItems(['全部', '冷却期', '持有中', '已售出'])
         
     def connect_signals(self):
-        """连接信号和槽"""
-        # 按钮信号
-        self.btn_add.clicked.connect(self.on_add_item)
-        self.btn_clear_filter.clicked.connect(self.clear_filters)
-        
-        # 筛选器信号
-        self.type_filter.currentTextChanged.connect(self.on_main_type_changed)
+        """连接信号槽"""
+        # 连接筛选器信号
+        self.type_filter.currentTextChanged.connect(self.on_type_filter_changed)
         self.subtype_filter.currentTextChanged.connect(self.on_filter_changed)
         self.wear_filter.currentTextChanged.connect(self.on_filter_changed)
         self.state_combo.currentTextChanged.connect(self.on_filter_changed)
         self.price_min.valueChanged.connect(self.on_filter_changed)
         self.price_max.valueChanged.connect(self.on_filter_changed)
+        self.btn_clear_filter.clicked.connect(self.on_clear_filter)
         
-        # 数据分析标签页切换信号
-        self.tabWidget.currentChanged.connect(self.on_tab_changed)
+        # 连接添加按钮信号
+        self.btn_add.clicked.connect(self.on_add_item)
         
-    def on_tab_changed(self, index):
-        """标签页切换时更新数据"""
-        if index == 2:  # 数据分析标签页
-            if self.controller:
-                self.controller._update_analysis()
+        # 连接统计按钮信号
+        self.btn_adjust_investment.clicked.connect(self.on_adjust_investment)
+        self.btn_add_fee.clicked.connect(self.on_add_fee)
         
-    def on_main_type_changed(self, main_type):
+    def on_type_filter_changed(self, main_type):
         # 更新子类型下拉框
         self.subtype_filter.clear()
         self.subtype_filter.addItems(GOODS_TYPES[main_type])
@@ -118,7 +113,7 @@ class MainView(QMainWindow):
                 price_max=self.price_max.value()
             )
 
-    def clear_filters(self):
+    def on_clear_filter(self):
         self.type_filter.setCurrentText('全部')
         self.subtype_filter.clear()
         self.subtype_filter.addItems(GOODS_TYPES['全部'])
@@ -129,8 +124,37 @@ class MainView(QMainWindow):
         if self.controller:
             self.controller.apply_filters()
 
+    def on_adjust_investment(self):
+        """调整总投资对话框"""
+        amount, ok = QInputDialog.getDouble(
+            self, '调整总投资',
+            '请输入调整金额（正数增加，负数减少）：',
+            0, -1000000, 1000000, 2
+        )
+        if ok and self.controller:
+            self.controller.update_total_investment(amount)
+
+    def on_add_fee(self):
+        """添加手续费对话框"""
+        amount, ok = QInputDialog.getDouble(
+            self, '添加手续费',
+            '请输入手续费金额：',
+            0, 0, 1000000, 2
+        )
+        if ok and self.controller:
+            self.controller.add_fee(amount)
+
     def show_error(self, message):
         QMessageBox.critical(self, '错误', message)
 
     def show_success(self, message):
         QMessageBox.information(self, '成功', message)
+
+    def update_statistics_labels(self, stats):
+        """更新统计信息标签"""
+        self.lbl_total_investment.setText(f"总投资: {stats['total_investment']:.2f}")
+        self.lbl_total_profit.setText(f"总收益: {stats['total_profit']:.2f}")
+        self.lbl_remaining_amount.setText(f"剩余金额: {stats['remaining_amount']:.2f}")
+        self.lbl_total_fee.setText(f"总手续费: {stats['total_fee']:.2f}")
+        self.lbl_purchase_market_value.setText(f"购买市值: {stats['purchase_market_value']:.2f}")
+        self.lbl_current_market_value.setText(f"当前市值: {stats['current_market_value']:.2f}")
