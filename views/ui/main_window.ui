@@ -163,6 +163,106 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="tab_analysis">
+       <attribute name="title">
+        <string>数据分析</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="QGroupBox" name="groupBox_summary">
+          <property name="title">
+           <string>数据汇总</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_total_profit_title">
+             <property name="text">
+              <string>总利润:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="label_total_profit">
+             <property name="text">
+              <string>¥0.00</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="label_total_items_title">
+             <property name="text">
+              <string>总交易量:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QLabel" name="label_total_items">
+             <property name="text">
+              <string>0</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_avg_profit_title">
+             <property name="text">
+              <string>平均利润:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLabel" name="label_avg_profit">
+             <property name="text">
+              <string>¥0.00</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QLabel" name="label_avg_days_title">
+             <property name="text">
+              <string>平均持有天数:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QLabel" name="label_avg_days">
+             <property name="text">
+              <string>0</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_charts">
+          <property name="title">
+           <string>数据图表</string>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <item>
+            <widget class="QTabWidget" name="chart_tabs">
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="tab_profit_by_type">
+              <attribute name="title">
+               <string>类型分布</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="layout_profit_by_type"/>
+             </widget>
+             <widget class="QWidget" name="tab_profit_trend">
+              <attribute name="title">
+               <string>利润趋势</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="layout_profit_trend"/>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
    </layout>

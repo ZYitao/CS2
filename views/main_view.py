@@ -79,6 +79,15 @@ class MainView(QMainWindow):
         self.price_min.valueChanged.connect(self.on_filter_changed)
         self.price_max.valueChanged.connect(self.on_filter_changed)
         
+        # 数据分析标签页切换信号
+        self.tabWidget.currentChanged.connect(self.on_tab_changed)
+        
+    def on_tab_changed(self, index):
+        """标签页切换时更新数据"""
+        if index == 2:  # 数据分析标签页
+            if self.controller:
+                self.controller._update_analysis()
+        
     def on_main_type_changed(self, main_type):
         # 更新子类型下拉框
         self.subtype_filter.clear()

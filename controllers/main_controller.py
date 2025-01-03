@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QPushButton, QTableWidgetItem, QMessageBox, QHeaderView, QDialog, QTableWidget
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QPainter
+from PyQt5.QtChart import QChart, QPieSeries, QChartView, QLineSeries, QDateTimeAxis, QValueAxis
 from datetime import datetime
 import pandas as pd
 from views.sell_item_dialog import SellItemDialog
@@ -58,6 +59,7 @@ class MainController:
             'price_max': float('inf')
         }
         self._update_tables()
+        self._update_analysis()
 
     def add_item(self):
         data = self.view.show_add_dialog()
@@ -117,6 +119,7 @@ class MainController:
             if success:
                 self.view.show_success(message)
                 self._update_tables()
+                self._update_analysis()  # 更新数据分析
             else:
                 self.view.show_error(message)
 
@@ -124,6 +127,126 @@ class MainController:
         """更新所有表格数据"""
         self._update_inventory_table()
         self._update_sold_items_table()
+
+    def _update_analysis(self):
+        """更新数据分析"""
+        # 获取已售商品数据
+        sold_df = self.model.get_sold_items()
+        if sold_df.empty:
+            self._update_summary_labels(0, 0, 0, 0)
+            self._clear_charts()
+            return
+
+        # 计算汇总数据
+        total_profit = sold_df['total_profit'].sum()
+        total_items = len(sold_df)
+        avg_profit = total_profit / total_items if total_items > 0 else 0
+        avg_days = sold_df['hold_days'].mean() if total_items > 0 else 0
+
+        # 更新标签
+        self._update_summary_labels(total_profit, total_items, avg_profit, avg_days)
+
+        # 更新图表
+        self._update_profit_by_type_chart(sold_df)
+        self._update_profit_trend_chart(sold_df)
+
+    def _update_summary_labels(self, total_profit, total_items, avg_profit, avg_days):
+        """更新汇总数据标签"""
+        self.view.label_total_profit.setText(f"¥{total_profit:.2f}")
+        self.view.label_total_items.setText(str(total_items))
+        self.view.label_avg_profit.setText(f"¥{avg_profit:.2f}")
+        self.view.label_avg_days.setText(f"{avg_days:.1f}")
+
+    def _update_profit_by_type_chart(self, df):
+        """更新按类型分布的饼图"""
+        # 创建新的图表
+        chart = QChart()
+        chart.setTitle("各类型商品利润分布")
+        chart.setAnimationOptions(QChart.SeriesAnimations)
+
+        # 创建饼图系列
+        series = QPieSeries()
+
+        # 按商品类型分组计算总利润
+        profit_by_type = df.groupby('goods_type')['total_profit'].sum()
+
+        # 添加数据到饼图
+        for goods_type, profit in profit_by_type.items():
+            slice = series.append(f"{goods_type}\n¥{profit:.2f}", profit)
+            slice.setLabelVisible(True)
+
+        # 将系列添加到图表
+        chart.addSeries(series)
+
+        # 创建图表视图
+        chart_view = QChartView(chart)
+        chart_view.setRenderHint(QPainter.Antialiasing)
+
+        # 清除旧的图表并添加新的
+        layout = self.view.layout_profit_by_type
+        self._clear_layout(layout)
+        layout.addWidget(chart_view)
+
+    def _update_profit_trend_chart(self, df):
+        """更新利润趋势折线图"""
+        # 创建新的图表
+        chart = QChart()
+        chart.setTitle("利润趋势")
+        chart.setAnimationOptions(QChart.SeriesAnimations)
+
+        # 创建折线系列
+        series = QLineSeries()
+        series.setName("利润")
+
+        # 按售出时间排序
+        df = df.sort_values('sell_time')
+        
+        # 添加数据点
+        cumulative_profit = 0
+        for _, row in df.iterrows():
+            sell_time = pd.to_datetime(row['sell_time'])
+            cumulative_profit += row['total_profit']
+            # 将日期时间转换为 QDateTime 可接受的时间戳
+            timestamp = sell_time.timestamp() * 1000  # 转换为毫秒
+            series.append(timestamp, cumulative_profit)
+
+        # 添加系列到图表
+        chart.addSeries(series)
+
+        # 创建坐标轴
+        axis_x = QDateTimeAxis()
+        axis_x.setFormat("yyyy-MM-dd")
+        axis_x.setTitleText("日期")
+        chart.addAxis(axis_x, Qt.AlignBottom)
+        series.attachAxis(axis_x)
+
+        axis_y = QValueAxis()
+        axis_y.setTitleText("累计利润 (¥)")
+        chart.addAxis(axis_y, Qt.AlignLeft)
+        series.attachAxis(axis_y)
+
+        # 创建图表视图
+        chart_view = QChartView(chart)
+        chart_view.setRenderHint(QPainter.Antialiasing)
+
+        # 清除旧的图表并添加新的
+        layout = self.view.layout_profit_trend
+        self._clear_layout(layout)
+        layout.addWidget(chart_view)
+
+    def _clear_charts(self):
+        """清除所有图表"""
+        self._clear_layout(self.view.layout_profit_by_type)
+        self._clear_layout(self.view.layout_profit_trend)
+
+    def _clear_layout(self, layout):
+        """清除布局中的所有部件"""
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
 
     def _update_inventory_table(self):
         """更新库存表格"""
@@ -192,7 +315,6 @@ class MainController:
                 sell_btn.setStyleSheet(self.BUTTON_STYLES["出售"])
                 sell_btn.clicked.connect(lambda checked, id=item['inventory_id']: self.sell_item(id))
                 self.view.inventory_table.setCellWidget(row, 9, sell_btn)
-
 
         # 调整列宽
         self.view.inventory_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
