@@ -125,6 +125,7 @@ class MainController:
 
     def _update_tables(self):
         """更新所有表格数据"""
+        self.model.check_cooling_items()
         self._update_inventory_table()
         self._update_sold_items_table()
 
