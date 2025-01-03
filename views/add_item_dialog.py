@@ -56,7 +56,7 @@ class AddItemDialog(QDialog):
             self.subtype_combo.addItems(ITEM_TYPES[main_type][1:])  # 排除"全部"选项
             
         # 更新暗金选项状态
-        is_gun = main_type in ['手枪', '步枪', '微型冲锋枪', '重型武器']
+        is_gun = main_type in ['手枪', '匕首', '步枪']
         self.stattrak_checkbox.setEnabled(is_gun)  # 只有枪械可以选择暗金
         if not is_gun:
             self.stattrak_checkbox.setChecked(False)
@@ -64,13 +64,9 @@ class AddItemDialog(QDialog):
     def get_data(self):
         """获取表单数据"""
         # 构建商品名称：子类型 + StatTrak™（如果选中）
-        name = self.subtype_combo.currentText()
-        if self.stattrak_checkbox.isChecked():
-            name += " (StatTrak™)"
-            
         return {
-            'goods_name': name,
-            'goods_type': self.type_combo.currentText(),  # 使用主类型
+            'goods_name': self.name_input.text(),
+            'goods_type': self.subtype_combo.currentText(),  # 使用主类型
             'goods_wear': self.wear_combo.currentText(),
             'goods_wear_value': self.wear_value_input.value(),
             'buy_price': self.price_input.value(),

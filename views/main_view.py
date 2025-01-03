@@ -71,7 +71,6 @@ class MainView(QMainWindow):
         self.btn_clear_filter.clicked.connect(self.clear_filters)
         
         # 筛选器信号
-        self.name_filter.textChanged.connect(self.on_filter_changed)
         self.type_filter.currentTextChanged.connect(self.on_main_type_changed)
         self.subtype_filter.currentTextChanged.connect(self.on_filter_changed)
         self.wear_filter.currentTextChanged.connect(self.on_filter_changed)
@@ -104,7 +103,6 @@ class MainView(QMainWindow):
             
             # 确保传递正确的子类型
             self.controller.apply_filters(
-                name=self.name_filter.text(),
                 item_type=main_type,
                 subtype=sub_type,  
                 wear=self.wear_filter.currentText(),
@@ -114,7 +112,6 @@ class MainView(QMainWindow):
             )
 
     def clear_filters(self):
-        self.name_filter.clear()
         self.type_filter.setCurrentText('全部')
         self.subtype_filter.clear()
         self.subtype_filter.addItems(ITEM_TYPES['全部'])

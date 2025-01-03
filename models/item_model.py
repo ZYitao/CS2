@@ -69,7 +69,7 @@ class ItemModel:
         return f"{buy_time.strftime('%Y%m%d%H%M%S')}_{goods_wear_value:.4f}"
 
     def add_item(self, goods_name, goods_type, goods_wear, goods_wear_value,
-                 is_stattrak, buy_price, buy_time=None):
+                 is_stattrak=False, buy_price=None, buy_time=None):
         """添加新商品到库存。
         
         Args:
@@ -85,7 +85,7 @@ class ItemModel:
             buy_time = datetime.now()
             
         # 生成库存ID
-        inventory_id = f"{buy_time.strftime('%Y%m%d%H%M%S')}_{goods_wear_value:.4f}"
+        inventory_id = self._generate_inventory_id(buy_time, goods_wear_value)
         
         # 创建新商品数据
         new_item = {
@@ -222,6 +222,7 @@ class ItemModel:
             return False, "商品不存在"
         
         item = df[item_mask].iloc[0]
+
         if item['goods_state'] != self.STATUS_HOLDING:
             return False, "商品状态不正确"
         
@@ -267,7 +268,11 @@ class ItemModel:
         return self._read_sold_items()
 
     def get_inventory_items(self):
-        """获取库存商品数据"""
+        """获取库存商品列表。
+        该方法从库存表中读取所有商品信息，并按状态和购买时间排序。
+        状态排序顺序：持有中 -> 冷却期 -> 已出售
+        时间排序：最近的在前
+        """ 
         df = self._read_inventory()
         if df.empty:
             return df
@@ -287,32 +292,22 @@ class ItemModel:
         
         # 按状态优先级和购买时间排序（时间倒序）
         df = df.sort_values(['status_priority', 'buy_time'], 
-                          ascending=[True, False])
+                        ascending=[True, True])
         
         # 删除辅助列
         df = df.drop('status_priority', axis=1)
         
         return df
 
-    def get_current_price(self, inventory_id):
+    def get_current_price(self, inventory_id):  
         """获取商品当前价格
         暂时返回购买价格作为当前价格
+        刷新库存表显示时用到。
         """
-        df = self._read_inventory()
-        item = df[df['inventory_id'] == inventory_id]
-        if not item.empty:
-            return item['buy_price'].iloc[0]
+        item = self.get_item_by_id(inventory_id)
+        if item:
+            return item['buy_price']
         return 0.0
-
-    def get_item_details(self, inventory_id):
-        """获取商品详细信息"""
-        df = self._read_inventory()
-        item_mask = df['inventory_id'] == inventory_id
-        
-        if not item_mask.any():
-            return None
-            
-        return df[item_mask].iloc[0]
 
     def get_time_info(self, item_id):
         """获取商品的时间信息"""

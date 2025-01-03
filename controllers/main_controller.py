@@ -7,11 +7,20 @@ from views.sell_item_dialog import SellItemDialog
 from config.item_types import ITEM_TYPES
 
 class MainController:
-    # 定义状态颜色
+    # 定义状态颜色（深色和浅色）
     STATUS_COLORS = {
-        0: QColor(255, 200, 200),  # 冷却期 - 浅红色
-        1: QColor(200, 255, 200),  # 持有中 - 浅绿色
-        2: QColor(200, 200, 255)   # 已售出 - 浅蓝色
+        0: {  # 冷却期
+            'light': QColor(255, 200, 200),  # 浅红色
+            'dark': QColor(255, 180, 180)    # 深红色
+        },
+        1: {  # 持有中
+            'light': QColor(200, 255, 200),  # 浅绿色
+            'dark': QColor(180, 255, 180)    # 深绿色
+        },
+        2: {  # 已售出
+            'light': QColor(200, 200, 255),  # 浅蓝色
+            'dark': QColor(180, 180, 255)    # 深蓝色
+        }
     }
 
     # 定义按钮样式
@@ -59,6 +68,7 @@ class MainController:
                     goods_type=data['goods_type'],
                     goods_wear=data['goods_wear'],
                     goods_wear_value=data['goods_wear_value'],
+                    is_stattrak=data['is_stattrak'],
                     buy_price=data['buy_price'],
                     buy_time=data['buy_time']
                 )
@@ -88,7 +98,7 @@ class MainController:
             return
 
         # 获取商品详情
-        item = self.model.get_item_details(inventory_id)
+        item = self.model.get_item_by_id(inventory_id)
         if item is None:
             self.view.show_error('商品不存在')
             return
@@ -131,6 +141,9 @@ class MainController:
         # 清空表格
         self.view.inventory_table.setRowCount(0)
 
+        # 记录每个状态的行数，用于交替显示深浅色
+        status_row_counts = {0: 0, 1: 0, 2: 0}
+
         # 填充数据
         for _, item in filtered_df.iterrows():
             row = self.view.inventory_table.rowCount()
@@ -141,11 +154,17 @@ class MainController:
             if item['is_stattrak']:
                 name += " (StatTrak™)"
             
-            # 获取状态和时间信息
+            # 获取状态和时间信息（拼接显示）
             status_text = self.model.get_item_status_text(item['goods_state'])
             time_info = self.model.get_time_info(item['inventory_id'])
             if time_info:
                 status_text = f"{status_text} {time_info}"
+            
+            # 确定是否使用深色
+            state = item['goods_state']
+            is_dark_row = (status_row_counts[state] % 2) == 1
+            color_key = 'dark' if is_dark_row else 'light'
+            status_row_counts[state] += 1
             
             # 创建并设置单元格项
             for col, value in enumerate([
@@ -158,8 +177,8 @@ class MainController:
                 f" {status_text} "
             ]):
                 cell_item = QTableWidgetItem(str(value))
-                # 设置背景颜色
-                cell_item.setBackground(self.STATUS_COLORS[item['goods_state']])
+                # 设置背景颜色（深浅交替）
+                cell_item.setBackground(self.STATUS_COLORS[state][color_key])
                 # 设置文本居中对齐
                 cell_item.setTextAlignment(Qt.AlignCenter)
                 self.view.inventory_table.setItem(row, col, cell_item)
@@ -220,13 +239,13 @@ class MainController:
 
         # 应用商品类型筛选
         if self.current_filters['item_type'] != '全部':
-            # 获取该大类下的所有子类型
-            subtypes = ITEM_TYPES[self.current_filters['item_type']][1:]  # 排除"全部"选项
             if self.current_filters['subtype'] != '全部':
                 # 如果选择了具体子类型，直接用子类型筛选
                 filtered_df = filtered_df[filtered_df['goods_type'] == self.current_filters['subtype']]
             else:
                 # 如果选择了全部，使用该大类下的所有子类型筛选
+                subtypes = ITEM_TYPES[self.current_filters['item_type']][1:]  # 排除"全部"选项
+                print(subtypes)
                 filtered_df = filtered_df[filtered_df['goods_type'].isin(subtypes)]
 
         # 应用磨损等级筛选

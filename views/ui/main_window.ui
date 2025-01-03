@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1280</width>
+    <width>963</width>
     <height>800</height>
    </rect>
   </property>
@@ -56,27 +56,6 @@
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_2">
            <item>
-            <layout class="QHBoxLayout" name="name_filter_layout">
-             <item>
-              <widget class="QLabel" name="label">
-               <property name="text">
-                <string>商品名称:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="name_filter">
-               <property name="minimumWidth">
-                <number>200</number>
-               </property>
-               <property name="placeholderText">
-                <string>输入商品名称</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
             <layout class="QHBoxLayout" name="type_filter_layout">
              <item>
               <widget class="QLabel" name="label_2">
@@ -86,18 +65,10 @@
               </widget>
              </item>
              <item>
-              <widget class="QComboBox" name="type_filter">
-               <property name="minimumWidth">
-                <number>100</number>
-               </property>
-              </widget>
+              <widget class="QComboBox" name="type_filter"/>
              </item>
              <item>
-              <widget class="QComboBox" name="subtype_filter">
-               <property name="minimumWidth">
-                <number>120</number>
-               </property>
-              </widget>
+              <widget class="QComboBox" name="subtype_filter"/>
              </item>
             </layout>
            </item>
@@ -111,11 +82,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QComboBox" name="wear_filter">
-               <property name="minimumWidth">
-                <number>100</number>
-               </property>
-              </widget>
+              <widget class="QComboBox" name="wear_filter"/>
              </item>
             </layout>
            </item>
@@ -144,9 +111,6 @@
              </item>
              <item>
               <widget class="QDoubleSpinBox" name="price_min">
-               <property name="minimumWidth">
-                <number>100</number>
-               </property>
                <property name="prefix">
                 <string>¥</string>
                </property>
@@ -164,9 +128,6 @@
              </item>
              <item>
               <widget class="QDoubleSpinBox" name="price_max">
-               <property name="minimumWidth">
-                <number>100</number>
-               </property>
                <property name="prefix">
                 <string>¥</string>
                </property>
@@ -211,8 +172,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1280</width>
-     <height>22</height>
+     <width>963</width>
+     <height>23</height>
     </rect>
    </property>
   </widget>
